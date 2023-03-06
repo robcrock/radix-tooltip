@@ -1,21 +1,45 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
 import "./App.css";
 import * as Tooltip from "@radix-ui/react-tooltip";
+import axios from "axios";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import Chart from "./components/Chart";
+
+async function getCategories() {
+  const response = await fetch("/data/categories.json");
+  const json = await response.json();
+  // console.log("data", data);
+  return json;
+}
+
+const fetchCategories = (): Promise<Any[]> =>
+  axios.get("/data/categories.json").then((response) => response.data);
 
 function App() {
-  const [count, setCount] = useState(0);
+  // Access the client
+  const queryClient = useQueryClient();
+
+  // Queries
+  const { data } = useQuery({
+    queryKey: ["categories"],
+    queryFn: fetchCategories,
+  });
+
+  const isLoading = !data;
+
+  if (isLoading) {
+    return <p>Loading…</p>;
+  }
+
+  console.log("data", data);
 
   return (
     <div className="App">
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src="/vite.svg" className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://reactjs.org" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
+      <Chart
+        data={data}
+        width={400}
+        height={400}
+        margin={{ top: 40, right: 40, bottom: 40, left: 40 }}
+      />
       <Tooltip.Provider delayDuration={100}>
         <Tooltip.Root>
           <svg width="100px" height="100px">
@@ -31,17 +55,6 @@ function App() {
           </Tooltip.Portal>
         </Tooltip.Root>
       </Tooltip.Provider>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
     </div>
   );
 }
