@@ -1,68 +1,97 @@
 import React, { useRef, useEffect } from "react";
 import * as d3 from "d3";
+import * as Tooltip from "@radix-ui/react-tooltip";
+import "./styles.css";
+import { Category } from "../../App";
 
-const MyChart = ({ data, width, height, margin }) => {
+type ChartProps = {
+  data: Category[];
+  width: number;
+  height: number;
+  margin: {
+    top: number;
+    right: number;
+    bottom: number;
+    left: number;
+  };
+};
+
+const MyChart: React.FC<ChartProps> = ({
+  data = [],
+  width,
+  height,
+  margin,
+}) => {
+  // Create the ref to bind the chart to
   const svgRef = useRef(null);
+  const plotRef = useRef(null);
 
+  // Calculate chart dimensions and size
+  const chartWidth = width - margin.left - margin.right;
+  const chartHeight = height - margin.top - margin.bottom;
+
+  // Create scales
+  const xScale = d3
+    .scaleBand()
+    .domain(data.map((d) => d.category))
+    .range([0, chartWidth])
+    .padding(0.1);
+
+  const yMax = d3.max(data, (d) => d.value);
+  const yScale = d3
+    .scaleLinear()
+    .domain([0, yMax as number])
+    .range([chartHeight, 0]);
+
+  // Render Axes
   useEffect(() => {
-    console.log({ width });
-    console.log({ height });
-    console.log(margin);
-    // Calculate chart dimensions and size
-    const chartWidth = width - margin.left - margin.right;
-    const chartHeight = height - margin.top - margin.bottom;
-
-    console.log({ chartWidth });
-
-    // Create scales
-    const xScale = d3
-      .scaleBand()
-      .domain(data.map((d) => d.category))
-      .range([0, chartWidth])
-      .padding(0.1);
-
-    const yScale = d3
-      .scaleLinear()
-      .domain([0, d3.max(data, (d) => d.value)])
-      .range([chartHeight, 0]);
-
-    console.log("domain", yScale.domain());
-    console.log("range", yScale.range());
-
-    // Create SVG element
-    const svg = d3
-      .select(svgRef.current)
-      .attr("width", width)
-      .attr("height", height);
-
-    // Create group element for chart area
-    const chart = svg
-      .append("g")
-      .attr("transform", `translate(${margin.left}, ${margin.top})`);
-
-    // Render bars
-    chart
-      .selectAll("rect")
-      .data(data)
-      .enter()
-      .append("rect")
-      .attr("x", (d) => xScale(d.category))
-      .attr("y", (d) => yScale(d.value))
-      .attr("width", xScale.bandwidth())
-      .attr("height", (d) => chartHeight - yScale(d.value))
-      .attr("fill", "steelblue");
+    // Create a ref to bind the axes to
+    const chart = d3.select(plotRef.current).append("g");
 
     // Render axes
     const xAxis = d3.axisBottom(xScale);
     const yAxis = d3.axisLeft(yScale);
+
     chart
       .append("g")
       .attr("transform", `translate(0, ${chartHeight})`)
       .call(xAxis);
-    chart.append("g").call(yAxis);
-  }, [data, width, height, margin]);
 
-  return <svg ref={svgRef}></svg>;
+    chart.append("g").call(yAxis);
+  }, [data]);
+
+  return (
+    <svg ref={svgRef} width={width} height={height}>
+      <Tooltip.Provider delayDuration={0}>
+        <g ref={plotRef} transform={`translate(${margin.left}, ${margin.top})`}>
+          {data.map((d) => {
+            return (
+              <React.Fragment key={d.category}>
+                <Tooltip.Root>
+                  <Tooltip.Trigger asChild>
+                    <rect
+                      key={d.category}
+                      x={xScale(d.category)}
+                      y={yScale(d.value)}
+                      width={xScale.bandwidth()}
+                      height={chartHeight - yScale(d.value)}
+                      fill="steelblue"
+                    />
+                  </Tooltip.Trigger>
+                  <Tooltip.Portal key={d.category}>
+                    <Tooltip.Content className="TooltipContent" sideOffset={5}>
+                      Radix Tooltip 🎉
+                      <Tooltip.Arrow className="TooltipArrow" />
+                    </Tooltip.Content>
+                  </Tooltip.Portal>
+                </Tooltip.Root>
+              </React.Fragment>
+            );
+          })}
+        </g>
+      </Tooltip.Provider>
+    </svg>
+  );
 };
 
 export default MyChart;
